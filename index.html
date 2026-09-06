@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Astra API Tester</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:760px;margin:40px auto;padding:20px;background:#f6f7f9;color:#111}
+.card{background:white;border:1px solid #ddd;border-radius:16px;padding:22px;box-shadow:0 4px 18px #0000000d}
+input,textarea,button{width:100%;box-sizing:border-box;padding:12px;margin-top:8px;border-radius:10px;border:1px solid #ccc;font:inherit}
+textarea{min-height:110px;resize:vertical} button{cursor:pointer;background:#111;color:white;border:0;margin-top:14px}
+button:disabled{opacity:.5}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+pre{white-space:pre-wrap;word-break:break-word;background:#111;color:#eee;padding:14px;border-radius:10px;min-height:80px}
+small{color:#666}.status{font-weight:600;margin:14px 0}
+@media(max-width:600px){.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="card">
+<h1>GPT-6 Astra API Tester</h1>
+<p><small>Your key is used only in this page's memory. Do not publish it in GitHub.</small></p>
+
+<label>Experiential Labs API key</label>
+<input id="key" type="password" placeholder="xpl_..." autocomplete="off">
+
+<label>Message</label>
+<textarea id="msg">Reply with exactly: ASTRA TEST PASSED</textarea>
+
+<div class="row">
+<button id="models">1. Verify API Key</button>
+<button id="test">2. Test Astra</button>
+</div>
+
+<div id="status" class="status">Ready.</div>
+<pre id="output">Results will appear here.</pre>
+</div>
+
+<script>
+const BASE="https://api.experientiallabs.ai/v1";
+const key=()=>document.getElementById("key").value.trim();
+const out=document.getElementById("output");
+const status=document.getElementById("status");
+
+async function request(path, options={}){
+  if(!key()) throw new Error("Enter your xpl_ API key first.");
+  const r=await fetch(BASE+path,{
+    ...options,
+    headers:{
+      "Authorization":"Bearer "+key(),
+      "Content-Type":"application/json",
+      ...(options.headers||{})
+    }
+  });
+  const text=await r.text();
+  let data; try{data=JSON.parse(text)}catch{data=text}
+  if(!r.ok) throw new Error("HTTP "+r.status+"\n"+(typeof data==="string"?data:JSON.stringify(data,null,2)));
+  return data;
+}
+
+document.getElementById("models").onclick=async()=>{
+  status.textContent="Checking key...";
+  try{
+    const data=await request("/models");
+    status.textContent="✅ API key authenticated.";
+    out.textContent=JSON.stringify(data,null,2);
+  }catch(e){
+    status.textContent="❌ Verification failed.";
+    out.textContent=e.message;
+  }
+};
+
+document.getElementById("test").onclick=async()=>{
+  status.textContent="Testing GPT-6 Astra...";
+  try{
+    const data=await request("/chat/completions",{
+      method:"POST",
+      body:JSON.stringify({
+        model:"gpt-6-astra",
+        messages:[{role:"user",content:document.getElementById("msg").value}],
+        max_tokens:100
+      })
+    });
+    status.textContent="✅ Astra request succeeded.";
+    out.textContent=JSON.stringify(data,null,2);
+  }catch(e){
+    status.textContent="❌ Astra request failed.";
+    out.textContent=e.message;
+  }
+};
+</script>
+</body>
+</html>
